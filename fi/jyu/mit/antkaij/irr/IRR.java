@@ -45,8 +45,8 @@ public class IRR {
                     //dm.print(w);
                     w.write(dm.variableName);
                     KrippendorffAlpha alpha = new KrippendorffAlpha(dm);
-                    w.write(String.format("\tAlpha-Reliability:\t" +
-                                          "%.3f\n",
+                    w.write(String.format("\tKrippendorff alpha = " +
+                                          "% .3f\n",
                                           alpha.value));
                 }
             }

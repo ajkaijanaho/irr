@@ -30,7 +30,7 @@
 
 package fi.jyu.mit.antkaij.irr;
 
-/* References:
+/* Literature:
 
    Klaus Krippendorff (2011).  Computing Krippendorff's
    Alpha-Reliability.
@@ -38,6 +38,9 @@ package fi.jyu.mit.antkaij.irr;
 
    Klaus Krippendorff (1980).  Content Analysis.  An Introduction to
    Its Methodology.  Sage.
+
+   References in comments are to Krippendorff 2011 unless otherwise
+   indicated.
 
  */
 
