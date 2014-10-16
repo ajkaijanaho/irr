@@ -58,13 +58,13 @@ public class KrippendorffAlpha {
 
         final int N  = units.size();
         final int m  = observers.size();
-        final int vN = values.size();
+        final int cN = values.size();
 
         final HashMap<String,Integer> valInx = new HashMap<String,Integer>();
-        for (int i = 0; i < vN; i++) valInx.put(values.get(i), i);
+        for (int i = 0; i < cN; i++) valInx.put(values.get(i), i);
 
         // Krippendorff's n_{uc} aka n_{uk}
-        final int[][] valuesByUnits = new int[N][vN];
+        final int[][] valuesByUnits = new int[N][cN];
         for (int u = 0; u < N; u++) {
             for (int o = 0; o < m; o++) {
                 String vals = dm.getValue(u, o);
@@ -76,7 +76,7 @@ public class KrippendorffAlpha {
         final int[] unitSums = new int[N]; /* Krippendorff's n_{u*} */
         for (int u = 0; u < N; u++) {
             int sum = 0;
-            for (int c = 0; c < vN; c++) {
+            for (int c = 0; c < cN; c++) {
                 sum += valuesByUnits[u][c];
             }
             unitSums[u] = sum;
@@ -84,9 +84,9 @@ public class KrippendorffAlpha {
 
         // coincidence table
         // construction clarified by Krippendorff 1980 p. 140
-        final double[][] coincidences = new double[vN][vN];
-        for (int c = 0; c < vN; c++) {
-            for (int k = 0; k < vN; k++) {
+        final double[][] coincidences = new double[cN][cN];
+        for (int c = 0; c < cN; c++) {
+            for (int k = 0; k < cN; k++) {
                 double sum = 0;
                 for (int u = 0; u < N; u++) {
                     int mu = unitSums[u];
@@ -101,8 +101,8 @@ public class KrippendorffAlpha {
         }
 
         // Krippendorff's n_{*c}
-        final int[] valSums = new int[vN];
-        for (int c = 0; c < vN; c++) {
+        final int[] valSums = new int[cN];
+        for (int c = 0; c < cN; c++) {
             int sum = 0;
             for (int i = 0; i < N; i++) {
                 if (unitSums[i] <= 1) continue;
@@ -123,8 +123,8 @@ public class KrippendorffAlpha {
         double nominator = 0;
         for (int u = 0; u < N; u++) {
             long sum = 0;
-            for (int c = 0; c < vN; c++) {
-                for (int k = c+1; k < vN; k++) {
+            for (int c = 0; c < cN; c++) {
+                for (int k = c+1; k < cN; k++) {
                     // using nominal data metric
                     sum += valuesByUnits[u][c] * valuesByUnits[u][k];
                 }
@@ -133,9 +133,9 @@ public class KrippendorffAlpha {
         }
 
         long denominator = 0;
-        for (int c = 0; c < vN; c++) {
+        for (int c = 0; c < cN; c++) {
             long sum = 0;
-            for (int k = c+1; k < vN; k++) {
+            for (int k = c+1; k < cN; k++) {
                 // using nominal data metric
                 sum += valSums[k];
             }
@@ -147,7 +147,7 @@ public class KrippendorffAlpha {
         System.out.print("VALUES BY UNITS\n");
         for (String s : units) System.out.print("\t" + s);
         System.out.print("\n");
-        for (int c = 0; c < vN; c++) {
+        for (int c = 0; c < cN; c++) {
             System.out.print(values.get(c));
             for (int u = 0; u < N; u++) {
                 int count = valuesByUnits[u][c];
@@ -168,9 +168,9 @@ public class KrippendorffAlpha {
         
         System.out.print("COINCIDENCES\n");
         for (String s : values) System.out.print("\t" + s);
-        for (int c = 0; c < vN; c++) {
+        for (int c = 0; c < cN; c++) {
             System.out.print("\n" + values.get(c));
-            for (int k = 0; k < vN; k++) {
+            for (int k = 0; k < cN; k++) {
                 System.out.printf("\t%6.3f", coincidences[c][k]);
             }
         }
