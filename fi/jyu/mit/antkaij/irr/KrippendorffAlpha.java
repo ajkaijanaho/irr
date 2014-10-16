@@ -32,6 +32,10 @@ package fi.jyu.mit.antkaij.irr;
 
 /* Literature:
 
+   Klaus Krippendorff (2013). Algorithm for boostrapping a
+   distribution for cα.
+   http://web.asc.upenn.edu/usr/krippendorff/Bootstrapping%20Revised(5).pdf
+
    Klaus Krippendorff (2011).  Computing Krippendorff's
    Alpha-Reliability.
    http://web.asc.upenn.edu/usr/krippendorff/mwebreliability5.pdf
@@ -49,13 +53,19 @@ import java.io.Writer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.HashMap;
+import java.util.Random;
 
+import static java.lang.Math.min;
+import static java.lang.Math.pow;
+import static java.lang.Math.round;
 import static java.lang.String.format;
 
 public class KrippendorffAlpha {
     public final String variableName;
 
     public final double value;
+
+    private final double denominator;
 
     private final List<String> units;
     private final List<String> observers;
@@ -83,6 +93,10 @@ public class KrippendorffAlpha {
     private final int totalSums; // Krippendorff's n
 
     public KrippendorffAlpha(DataMatrix dm) {
+        this(dm, 20000);
+    }
+
+    public KrippendorffAlpha(DataMatrix dm, int resamples) {
         variableName = dm.variableName;
 
         units = dm.getUnits();
@@ -159,23 +173,166 @@ public class KrippendorffAlpha {
         
         double nominator = 0;
         for (int c = 0; c < cN; c++) {
-            for (int k = c+1; k < cN; k++) {
+            for (int k = 0; k < cN; k++) {
                 // using nominal data metric
+                if (k == c) continue;
                 nominator += coincidences[c][k];
             }
         }
+        nominator /= totalSums;
 
-        long denominator = 0;
+        long summ = 0;
         for (int c = 0; c < cN; c++) {
             long sum = 0;
-            for (int k = c+1; k < cN; k++) {
+            for (int k = 0; k < cN; k++) {
                 // using nominal data metric
+                if (c == k) continue;
                 sum += valSums[k];
             }
-            denominator += valSums[c] * sum;
+            summ += valSums[c] * sum;
+        }
+        denominator = (double)summ / (totalSums*(totalSums - 1));
+
+        value = 1 - nominator / denominator;
+
+        if (resamples > 0) bootstrap(resamples);
+    }
+
+    private int Q() {
+        int q = 0;
+        for (int c = 0; c < cN; c++) {
+            for (int k = 0; k < cN; k++) {
+                if (coincidences[c][k] > 0) q++;
+            }
+        }
+        return q;
+    }
+
+    private static final int precision = 10000;
+    private static final int base = -precision;
+    private static int toFP(double x) {
+        int rv = (int)round(x*precision)-base;
+        if (rv < 0) return 0;
+        if (rv >= precision-base) return precision-base;
+        return rv;
+    }
+
+    private static double fromFP(int fp) {
+        return (double)(fp+base)/precision;
+    }
+
+    private int[] nalpha;
+    private int nalpha_divisor;
+
+    /* Krippendorff 2013 Second Step
+
+       Krippendorff 2013 is annoyingly unclear about the correct
+       construction of f.  Read naturally, f is a constant function of
+       r evaluating to a function of c and k; it is obvious from how
+       it is used later that this is not the intended reading.
+
+       It seems to me the intended reading is this:
+
+       1. Find the smallest c and k such that SUM SUM o_gh / n.. >= r
+
+       2. f(r) := delta_ck / M De for these c and k.
+    */
+    private double f(double r, double invMDe) {
+        double sum = 0;
+        int c = 0, k = 0;
+        OUTER: for (c = 0; c < cN; c++) {
+            for (k = 0; k < cN; k++) {
+                sum += coincidences[c][k];
+                if (sum/totalSums >= r) break OUTER;
+            }
         }
 
-        value = 1 - (totalSums - 1) * (nominator / denominator);
+        // using nominal data metric
+        return  c == k ? 0 : invMDe;
+    }
+
+
+    // Based on Krippendorff 2013.
+    private void bootstrap(int X) {
+        // First Step
+        final int M = min(25*Q(), totalSums*(m-1)/2);
+
+        // Second Step (partial; see f above for the rest)
+        final double invMDe = 1.0/(M*denominator);
+
+        // Third Step
+        nalpha = new int[precision-base+1];
+        final Random rand = new Random();
+        for (int i = 0; i < X; i++) {
+            double alpha = 1;
+            for (int j = 0; j < M; j++) {
+                double r = rand.nextDouble();
+                alpha -= f(r, invMDe);
+            }
+            ++nalpha[toFP(alpha)];
+            if (i % (X/20) == 0) {
+                System.err.printf("Bootstrap progress %d %%\r\r", i*100/X);
+            }
+        }
+
+        // Fourth Step
+        int nx = 0;
+        {
+            int count = 0;
+            for (int c = 0; c < cN; c++) {
+                if (coincidences[c][c] > 0) {
+                    count++;
+                    if (count == 2) break;
+                }
+            }
+            switch (count) {
+            case 0:
+                break;
+            case 1:
+                nx = nalpha[toFP(1)];
+                nalpha[toFP(1)] = 0;
+                break;
+            case 2:
+                double sum = 0;
+                for (int c = 0; c < cN; c++) {
+                    sum += pow((double)coincidences[c][c] / totalSums,
+                               M);
+                }
+                nx = (int)round(X*sum);
+                nalpha[toFP(1)] -= nx;
+                break;
+            default:
+                System.err.println("Internal Error in Fourth Step");
+                System.exit(1);
+            }
+        }
+        
+        // Fifth Step
+        nalpha_divisor = X - nx;
+    }
+
+    public void printDistribution(Writer w) throws IOException {
+        w.write("Distribution:\n");
+        for (int i = -10; i <= 10; i++) {
+            double mid = (double)i / 10;
+            int low = toFP(mid - 0.05);
+            int high = toFP(mid + 0.05);
+            long sum = 0;
+            for (int j = low; j < high; j++) {
+                sum += nalpha[j];
+            }
+            double p = (double)sum /*/ (high-low)*/ / nalpha_divisor;
+            w.write(format("% 3.1f ", mid));
+            if (p >= 0.01) {
+                double op = p;
+                while (p > 0) {
+                    w.write("*");
+                    p -= 0.01;
+                }
+                w.write(format(" %4.2f", op));
+            }
+            w.write("\n");
+        }
     }
 
     public void print(Writer w) throws IOException {
@@ -183,6 +340,8 @@ public class KrippendorffAlpha {
         
         w.write(format("Krippendorff alpha = % .3f\n\n", value));
 
+        printDistribution(w);
+        
         w.write("Values by units\n");
         for (String s : units) w.write("\t" + s);
         w.write("\n");
