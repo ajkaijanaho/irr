@@ -82,6 +82,24 @@ public class KrippendorffAlpha {
             unitSums[u] = sum;
         }
 
+        // coincidence table
+        // construction clarified by Krippendorff 1980 p. 140
+        final double[][] coincidences = new double[vN][vN];
+        for (int c = 0; c < vN; c++) {
+            for (int k = 0; k < vN; k++) {
+                double sum = 0;
+                for (int u = 0; u < N; u++) {
+                    int mu = unitSums[u];
+                    if (mu <= 1) continue;
+                    int nc = valuesByUnits[u][c];
+                    int nk = valuesByUnits[u][k];
+                    if (c == k) nk--;
+                    sum += (double)(nc*nk)/(mu-1);
+                }
+                coincidences[c][k] = sum;
+            }
+        }
+
         // Krippendorff's n_{*c}
         final int[] valSums = new int[vN];
         for (int c = 0; c < vN; c++) {
@@ -126,7 +144,6 @@ public class KrippendorffAlpha {
 
         value = 1 - (totalSums - 1) * (nominator / denominator);
         
-        /*
         System.out.print("VALUES BY UNITS\n");
         for (String s : units) System.out.print("\t" + s);
         System.out.print("\n");
@@ -148,6 +165,15 @@ public class KrippendorffAlpha {
         System.out.print("\t");
         System.out.print(totalSums);
         System.out.print("\n");
-        */
+        
+        System.out.print("COINCIDENCES\n");
+        for (String s : values) System.out.print("\t" + s);
+        for (int c = 0; c < vN; c++) {
+            System.out.print("\n" + values.get(c));
+            for (int k = 0; k < vN; k++) {
+                System.out.printf("\t%2.3f", coincidences[c][k]);
+            }
+        }
+        System.out.print("\n");
     }
 }
