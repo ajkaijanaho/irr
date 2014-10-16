@@ -51,20 +51,45 @@ import java.util.HashMap;
 public class KrippendorffAlpha {
     public final double value;
 
+    private final List<String> units;
+    private final List<String> observers;
+    private final List<String> values;
+
+    private final int N;
+    private final int m;
+    private final int cN;
+
+    private final HashMap<String,Integer> valInx
+        = new HashMap<String,Integer>();
+
+    // Krippendorff's n_{uc} aka n_{uk}
+    private final int[][] valuesByUnits;
+
+    /* Krippendorff's n_{u*} */
+    private final int[] unitSums;
+
+    // coincidence table
+    private final double[][] coincidences;
+
+    // Krippendorff's n_{*c}
+    private final int[] valSums;
+
+    private final int totalSums; // Krippendorff's n_{**}
+
     public KrippendorffAlpha(DataMatrix dm) {
-        final List<String> units = dm.getUnits();
-        final List<String> observers = dm.getObservers();
-        final List<String> values = dm.getValues();
+        units = dm.getUnits();
+        observers = dm.getObservers();
+        values = dm.getValues();
 
-        final int N  = units.size();
-        final int m  = observers.size();
-        final int cN = values.size();
+        N  = units.size();
+        m  = observers.size();
+        cN = values.size();
 
-        final HashMap<String,Integer> valInx = new HashMap<String,Integer>();
         for (int i = 0; i < cN; i++) valInx.put(values.get(i), i);
 
-        // Krippendorff's n_{uc} aka n_{uk}
-        final int[][] valuesByUnits = new int[N][cN];
+        // Construct the values-by-units table
+
+        valuesByUnits = new int[N][cN];
         for (int u = 0; u < N; u++) {
             for (int o = 0; o < m; o++) {
                 String vals = dm.getValue(u, o);
@@ -73,7 +98,8 @@ public class KrippendorffAlpha {
                 valuesByUnits[u][val]++;
             }
         }
-        final int[] unitSums = new int[N]; /* Krippendorff's n_{u*} */
+
+        unitSums = new int[N];
         for (int u = 0; u < N; u++) {
             int sum = 0;
             for (int c = 0; c < cN; c++) {
@@ -82,9 +108,10 @@ public class KrippendorffAlpha {
             unitSums[u] = sum;
         }
 
-        // coincidence table
-        // construction clarified by Krippendorff 1980 p. 140
-        final double[][] coincidences = new double[cN][cN];
+        // Construct the coincidence table.
+        // Construction clarified by Krippendorff 1980 p. 140.
+
+        coincidences = new double[cN][cN];
         for (int c = 0; c < cN; c++) {
             for (int k = 0; k < cN; k++) {
                 double sum = 0;
@@ -100,8 +127,7 @@ public class KrippendorffAlpha {
             }
         }
 
-        // Krippendorff's n_{*c}
-        final int[] valSums = new int[cN];
+        valSums = new int[cN];
         for (int c = 0; c < cN; c++) {
             int sum = 0;
             for (int i = 0; i < N; i++) {
@@ -111,10 +137,13 @@ public class KrippendorffAlpha {
             valSums[c] = sum;
         }
 
-        int totalSums = 0; // Krippendorff's n_{**}
-        for (int i = 0; i < N; i++) {
-            if (unitSums[i] <= 1) continue;
-            totalSums += unitSums[i];
+        {
+            int sum = 0;
+            for (int i = 0; i < N; i++) {
+                if (unitSums[i] <= 1) continue;
+                sum += unitSums[i];
+            }
+            totalSums = sum;
         }
 
         /* Compute the actual alpha, using the formula at Step E.4 in
