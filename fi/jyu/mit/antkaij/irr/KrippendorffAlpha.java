@@ -71,10 +71,10 @@ public class KrippendorffAlpha {
     // coincidence table
     private final double[][] coincidences;
 
-    // Krippendorff's n_{*c}
+    // Krippendorff's n_c
     private final int[] valSums;
 
-    private final int totalSums; // Krippendorff's n_{**}
+    private final int totalSums; // Krippendorff's n
 
     public KrippendorffAlpha(DataMatrix dm) {
         units = dm.getUnits();
@@ -146,19 +146,15 @@ public class KrippendorffAlpha {
             totalSums = sum;
         }
 
-        /* Compute the actual alpha, using the formula at Step E.4 in
+        /* Compute the actual alpha, using the formula at Step D.4 in
            http://web.asc.upenn.edu/usr/krippendorff/mwebreliability5.pdf */
         
         double nominator = 0;
-        for (int u = 0; u < N; u++) {
-            long sum = 0;
-            for (int c = 0; c < cN; c++) {
-                for (int k = c+1; k < cN; k++) {
-                    // using nominal data metric
-                    sum += valuesByUnits[u][c] * valuesByUnits[u][k];
-                }
+        for (int c = 0; c < cN; c++) {
+            for (int k = c+1; k < cN; k++) {
+                // using nominal data metric
+                nominator += coincidences[c][k];
             }
-            if (sum != 0) nominator += (double)sum / (unitSums[u]-1);
         }
 
         long denominator = 0;
