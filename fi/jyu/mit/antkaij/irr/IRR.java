@@ -43,11 +43,8 @@ public class IRR {
                     DataMatrix dm = DataMatrix.parse(r);
                     if (dm == null) break;
                     //dm.print(w);
-                    w.write(dm.variableName);
                     KrippendorffAlpha alpha = new KrippendorffAlpha(dm);
-                    w.write(String.format("\tKrippendorff alpha = " +
-                                          "% .3f\n",
-                                          alpha.value));
+                    alpha.print(w);
                 }
             }
     }

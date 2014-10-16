@@ -44,11 +44,17 @@ package fi.jyu.mit.antkaij.irr;
 
  */
 
+import java.io.IOException;
+import java.io.Writer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.HashMap;
 
+import static java.lang.String.format;
+
 public class KrippendorffAlpha {
+    public final String variableName;
+
     public final double value;
 
     private final List<String> units;
@@ -77,6 +83,8 @@ public class KrippendorffAlpha {
     private final int totalSums; // Krippendorff's n
 
     public KrippendorffAlpha(DataMatrix dm) {
+        variableName = dm.variableName;
+
         units = dm.getUnits();
         observers = dm.getObservers();
         values = dm.getValues();
@@ -168,37 +176,43 @@ public class KrippendorffAlpha {
         }
 
         value = 1 - (totalSums - 1) * (nominator / denominator);
+    }
+
+    public void print(Writer w) throws IOException {
+        w.write(format("Variable: %s\n", variableName));
         
-        System.out.print("VALUES BY UNITS\n");
-        for (String s : units) System.out.print("\t" + s);
-        System.out.print("\n");
+        w.write(format("Krippendorff alpha = % .3f\n\n", value));
+
+        w.write("Values by units\n");
+        for (String s : units) w.write("\t" + s);
+        w.write("\n");
         for (int c = 0; c < cN; c++) {
-            System.out.print(values.get(c));
+            w.write(values.get(c));
             for (int u = 0; u < N; u++) {
                 int count = valuesByUnits[u][c];
-                System.out.print("\t");
-                if (count > 0) System.out.print(count);
+                w.write("\t");
+                if (count > 0) w.write(""+count);
             }
-            System.out.print("\t");
-            System.out.print(valSums[c]);
-            System.out.print("\n");
+            w.write("\t");
+            w.write(""+valSums[c]);
+            w.write("\n");
         }
         for (int i = 0; i < N; i++) {
-            System.out.print("\t");
-            System.out.print(unitSums[i]);
+            w.write("\t");
+            w.write(""+unitSums[i]);
         }
-        System.out.print("\t");
-        System.out.print(totalSums);
-        System.out.print("\n");
+        w.write("\t");
+        w.write(""+totalSums);
+        w.write("\n");
         
-        System.out.print("COINCIDENCES\n");
-        for (String s : values) System.out.print("\t" + s);
+        w.write("Coincidences\n");
+        for (String s : values) w.write("\t" + s);
         for (int c = 0; c < cN; c++) {
-            System.out.print("\n" + values.get(c));
+            w.write("\n" + values.get(c));
             for (int k = 0; k < cN; k++) {
-                System.out.printf("\t%6.3f", coincidences[c][k]);
+                w.write(format("\t%6.3f", coincidences[c][k]));
             }
         }
-        System.out.print("\n");
+        w.write("\n");
     }
 }
