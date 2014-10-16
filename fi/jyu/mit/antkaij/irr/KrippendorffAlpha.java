@@ -171,7 +171,7 @@ public class KrippendorffAlpha {
         for (int c = 0; c < vN; c++) {
             System.out.print("\n" + values.get(c));
             for (int k = 0; k < vN; k++) {
-                System.out.printf("\t%2.3f", coincidences[c][k]);
+                System.out.printf("\t%6.3f", coincidences[c][k]);
             }
         }
         System.out.print("\n");
