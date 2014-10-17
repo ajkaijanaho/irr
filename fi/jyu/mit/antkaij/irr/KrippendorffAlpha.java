@@ -314,22 +314,25 @@ public class KrippendorffAlpha {
     }
 
     public void printDistribution(Writer w) throws IOException {
-        w.write("Distribution:\n");
-        for (int i = -10; i <= 10; i++) {
-            double mid = (double)i / 10;
-            int low = toFP(mid - 0.05);
-            int high = toFP(mid + 0.05);
+        w.write("Bootstrapped probability distribution:\n");
+        for (int i = -10; i < 10; i++) {
+            double low = i / 10.0;
+            double high = low + 0.1;
+            int lowi = toFP(low);
+            int highi = toFP(high);
+            if (i == 10) highi++;
             long sum = 0;
-            for (int j = low; j < high; j++) {
+            for (int j = lowi; j < highi; j++) {
                 sum += nalpha[j];
             }
-            double p = (double)sum /*/ (high-low)*/ / nalpha_divisor;
-            w.write(format("% 3.1f ", mid));
+            double p = (double)sum / nalpha_divisor;
+            w.write(format("α ∈ [% 3.1f..% 3.1f%c ", low, high,
+                           i == 9 ? ']' : ')'));
             if (p >= 0.01) {
                 double op = p;
                 while (p > 0) {
                     w.write("*");
-                    p -= 0.01;
+                    p -= 1.0/60;
                 }
                 w.write(format(" %4.2f", op));
             }
@@ -338,12 +341,15 @@ public class KrippendorffAlpha {
     }
 
     public void print(Writer w) throws IOException {
+        w.write("======= KRIPPENDORFF'S ALPHA RELIABILITY =======\n");
         w.write(format("Variable: %s\n", variableName));
         
-        w.write(format("Krippendorff alpha = % .3f\n\n", value));
+        w.write(format("α = % .3f\n\n", value));
 
         printDistribution(w);
-        
+        w.write("\n");
+
+        /*
         w.write("Values by units\n");
         for (String s : units) w.write("\t" + s);
         w.write("\n");
@@ -365,7 +371,8 @@ public class KrippendorffAlpha {
         w.write("\t");
         w.write(""+totalSums);
         w.write("\n");
-        
+        */
+
         w.write("Coincidences\n");
         for (String s : values) w.write("\t" + s);
         for (int c = 0; c < cN; c++) {
