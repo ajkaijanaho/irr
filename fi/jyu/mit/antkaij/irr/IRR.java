@@ -43,7 +43,7 @@ public class IRR {
                 while (true) {
                     DataMatrix dm = DataMatrix.parse(r);
                     if (dm == null) break;
-                    KrippendorffAlpha stat = new KrippendorffAlpha(dm);
+                    ReliabilityStatistic stat = new KrippendorffAlpha(dm);
                     System.out.printf("======= %s =======\n",
                                       stat.name());
                     System.out.printf("Variable: %s\n", stat.variable());

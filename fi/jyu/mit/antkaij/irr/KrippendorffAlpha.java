@@ -61,7 +61,7 @@ import static java.lang.Math.round;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 
-public class KrippendorffAlpha {
+public class KrippendorffAlpha implements ReliabilityStatistic {
     public final String variableName;
 
     public final double value;
