@@ -59,6 +59,7 @@ import static java.lang.Math.min;
 import static java.lang.Math.pow;
 import static java.lang.Math.round;
 import static java.lang.String.format;
+import static java.util.Arrays.asList;
 
 public class KrippendorffAlpha {
     public final String variableName;
@@ -74,6 +75,9 @@ public class KrippendorffAlpha {
     private final int N;
     private final int m;
     private final int cN;
+
+    private final int X;
+    private final int M;
 
     private final HashMap<String,Integer> valInx
         = new HashMap<String,Integer>();
@@ -195,7 +199,11 @@ public class KrippendorffAlpha {
 
         value = 1 - nominator / denominator;
 
-        if (resamples > 0) bootstrap(resamples);
+        X = resamples;
+        
+        M = resamples > 0 ? min(25*Q(), totalSums*(m-1)/2) : 0;
+
+        if (resamples > 0) bootstrap();
     }
 
     private int Q() {
@@ -253,9 +261,9 @@ public class KrippendorffAlpha {
 
 
     // Based on Krippendorff 2013.
-    private void bootstrap(int X) {
+    private void bootstrap() {
         // First Step
-        final int M = min(25*Q(), totalSums*(m-1)/2);
+        // Compute M; computed in the constructor
 
         // Second Step (partial; see f above for the rest)
         final double invMDe = 1.0/(M*denominator);
@@ -313,8 +321,48 @@ public class KrippendorffAlpha {
         nalpha_divisor = X - nx;
     }
 
+    public double pValue(double minimumAlpha) {
+        long sum = 0;
+        int mina = toFP(minimumAlpha);
+        for (int i = 0; i < mina; i++) {
+            sum += nalpha[i];
+        }
+        return (double)sum / nalpha_divisor;
+    }
+
+    public static class ConfidenceInterval {
+        public final double p;
+        public final double min;
+        public final double max;
+
+        public ConfidenceInterval(double p, double min, double max) {
+            this.p = p;
+            this.min = min;
+            this.max = max;
+        }
+    }
+
+    public ConfidenceInterval confidenceInterval(final double p) {
+        long sum = 0;
+        final long plow = round(p/2*nalpha_divisor);
+        final long phigh = round((1-p/2)*nalpha_divisor);
+        int i;
+        for (i = 0; i < nalpha.length; i++) {
+            sum += nalpha[i];
+            if (sum >= plow) break;
+        }
+        double min = fromFP(i);
+        for (/* i */; i < nalpha.length; i++) {
+            if (sum > phigh) break;
+            sum += nalpha[i];
+        }
+        double max = fromFP(i);
+        return new ConfidenceInterval(p, min, max);
+    }
+
     public void printDistribution(Writer w) throws IOException {
-        w.write("Bootstrapped probability distribution:\n");
+        w.write(format("Bootstrapped sampling distribution (X = %d, M = %d):\n",
+                       X, M));
         for (int i = -10; i < 10; i++) {
             double low = i / 10.0;
             double high = low + 0.1;
@@ -349,6 +397,21 @@ public class KrippendorffAlpha {
         printDistribution(w);
         w.write("\n");
 
+        w.write("Confidence intervals:\n");
+        for (int pperc : asList(95, 99)) {
+            ConfidenceInterval ci = confidenceInterval((100-pperc) / 100.0);
+            w.write(format("%d %% CI % .3f to % .3f\n",
+                           pperc, ci.min, ci.max));
+        }
+        w.write("\n");
+
+        w.write("Significance tests:\n");
+        for (double alpha :
+                 asList(0.9,0.8,0.7,0.667,0.6,0.5,0.4,0.3,0.2,0.1,0.0)) {
+            w.write(format("α < %.3f p = %.3f\n", alpha, pValue(alpha)));
+        }
+        w.write("\n");
+
         /*
         w.write("Values by units\n");
         for (String s : units) w.write("\t" + s);
@@ -381,6 +444,7 @@ public class KrippendorffAlpha {
                 w.write(format("\t%6.3f", coincidences[c][k]));
             }
         }
+        w.write("\n");
         w.write("\n");
     }
 }
