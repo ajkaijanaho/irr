@@ -412,30 +412,6 @@ public class KrippendorffAlpha {
         }
         w.write("\n");
 
-        /*
-        w.write("Values by units\n");
-        for (String s : units) w.write("\t" + s);
-        w.write("\n");
-        for (int c = 0; c < cN; c++) {
-            w.write(values.get(c));
-            for (int u = 0; u < N; u++) {
-                int count = valuesByUnits[u][c];
-                w.write("\t");
-                if (count > 0) w.write(""+count);
-            }
-            w.write("\t");
-            w.write(""+valSums[c]);
-            w.write("\n");
-        }
-        for (int i = 0; i < N; i++) {
-            w.write("\t");
-            w.write(""+unitSums[i]);
-        }
-        w.write("\t");
-        w.write(""+totalSums);
-        w.write("\n");
-        */
-
         w.write("Coincidences\n");
         for (String s : values) w.write("\t" + s);
         for (int c = 0; c < cN; c++) {
