@@ -271,9 +271,11 @@ public class KrippendorffAlpha {
             }
             ++nalpha[toFP(alpha)];
             if (i % (X/20) == 0) {
-                System.err.printf("Bootstrap progress %d %%\r\r", i*100/X);
+                System.err.printf("Bootstrap progress %d %%\r", i*100/X);
             }
         }
+        System.err.print("                        \r");
+
 
         // Fourth Step
         int nx = 0;
