@@ -32,19 +32,43 @@ package fi.jyu.mit.antkaij.irr;
 
 import java.io.IOException;
 import java.io.LineNumberReader;
-import java.io.Writer;
+import java.io.OutputStreamWriter;
+
+import static java.util.Arrays.asList;
 
 public class IRR {
     public static void main(String[] args) throws IOException {
         try (LineNumberReader r =
-             new LineNumberReader(new java.io.InputStreamReader(System.in));
-             Writer w = new java.io.OutputStreamWriter(System.out)) {
+             new LineNumberReader(new java.io.InputStreamReader(System.in))) {
                 while (true) {
                     DataMatrix dm = DataMatrix.parse(r);
                     if (dm == null) break;
-                    //dm.print(w);
-                    KrippendorffAlpha alpha = new KrippendorffAlpha(dm);
-                    alpha.print(w);
+                    KrippendorffAlpha stat = new KrippendorffAlpha(dm);
+                    System.out.printf("======= %s =======\n",
+                                      stat.name());
+                    System.out.printf("Variable: %s\n", stat.variable());
+                    System.out.printf("%s = % .3f\n\n",
+                                      stat.letter(),
+                                      stat.pointEstimate());
+                    System.out.print("Confidence intervals:\n");
+                    for (int pperc : asList(95, 99)) {
+                        ConfidenceInterval ci =
+                            stat.confidenceInterval((100-pperc) / 100.0);
+                        System.out.printf("%d %% CI % .3f to % .3f\n",
+                                          pperc, ci.min, ci.max);
+                    }
+                    System.out.print("\n");
+                    System.out.print("Significance tests:\n");
+                    for (double val : stat.thresholdValues()) {
+                        System.out.printf("%s < %.3f p = %.3f\n",
+                                          stat.letter(),
+                                          val, stat.pValue(val));
+                    }
+                    System.out.print("\n");
+                    OutputStreamWriter w = new OutputStreamWriter(System.out);
+                    stat.printAdditionalInfo(w);
+                    w.flush();
+                    System.out.print("\n");
                 }
             }
     }

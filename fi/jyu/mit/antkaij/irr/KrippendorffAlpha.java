@@ -329,19 +329,6 @@ public class KrippendorffAlpha {
         }
         return (double)sum / nalpha_divisor;
     }
-
-    public static class ConfidenceInterval {
-        public final double p;
-        public final double min;
-        public final double max;
-
-        public ConfidenceInterval(double p, double min, double max) {
-            this.p = p;
-            this.min = min;
-            this.max = max;
-        }
-    }
-
     public ConfidenceInterval confidenceInterval(final double p) {
         long sum = 0;
         final long plow = round(p/2*nalpha_divisor);
@@ -374,7 +361,7 @@ public class KrippendorffAlpha {
                 sum += nalpha[j];
             }
             double p = (double)sum / nalpha_divisor;
-            w.write(format("α ∈ [% 3.1f..% 3.1f%c ", low, high,
+            w.write(format("α ∈ [% 3.1f, % 3.1f%c ", low, high,
                            i == 9 ? ']' : ')'));
             if (p >= 0.01) {
                 double op = p;
@@ -388,30 +375,21 @@ public class KrippendorffAlpha {
         }
     }
 
-    public void print(Writer w) throws IOException {
-        w.write("======= KRIPPENDORFF'S ALPHA RELIABILITY =======\n");
-        w.write(format("Variable: %s\n", variableName));
+    public String name() { return "Krippendorff's alpha-reliability"; }
+    public String letter() { return "α"; }
+    public String variable() { return variableName; }
+    public double pointEstimate() { return value; }
+
+    public List<Double> thresholdValues() {
+        return asList(0.9,0.8,0.7,0.667,0.6,0.5,0.4,0.3,0.2,0.1,0.0);
+    }
+
+    public void printAdditionalInfo(Writer w) throws IOException {
+        if (X > 0) {
+            printDistribution(w);
+            w.write("\n");
+        }
         
-        w.write(format("α = % .3f\n\n", value));
-
-        printDistribution(w);
-        w.write("\n");
-
-        w.write("Confidence intervals:\n");
-        for (int pperc : asList(95, 99)) {
-            ConfidenceInterval ci = confidenceInterval((100-pperc) / 100.0);
-            w.write(format("%d %% CI % .3f to % .3f\n",
-                           pperc, ci.min, ci.max));
-        }
-        w.write("\n");
-
-        w.write("Significance tests:\n");
-        for (double alpha :
-                 asList(0.9,0.8,0.7,0.667,0.6,0.5,0.4,0.3,0.2,0.1,0.0)) {
-            w.write(format("α < %.3f p = %.3f\n", alpha, pValue(alpha)));
-        }
-        w.write("\n");
-
         w.write("Coincidences\n");
         for (String s : values) w.write("\t" + s);
         for (int c = 0; c < cN; c++) {
