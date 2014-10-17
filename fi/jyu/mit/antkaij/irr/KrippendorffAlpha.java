@@ -360,7 +360,7 @@ public class KrippendorffAlpha implements ReliabilityStatistic {
                 sum += nalpha[j];
             }
             double p = (double)sum / nalpha_divisor;
-            w.write(format("α ∈ [% 3.1f, % 3.1f%c ", low, high,
+            w.write(format("𝛼 ∈ [% 3.1f, % 3.1f%c ", low, high,
                            i == 9 ? ']' : ')'));
             if (p >= 0.01) {
                 double op = p;
@@ -375,7 +375,7 @@ public class KrippendorffAlpha implements ReliabilityStatistic {
     }
 
     public String name() { return "Krippendorff's alpha-reliability"; }
-    public String letter() { return "α"; }
+    public String letter() { return "𝛼"; }
     public String variable() { return variableName; }
     public double pointEstimate() { return value; }
 
