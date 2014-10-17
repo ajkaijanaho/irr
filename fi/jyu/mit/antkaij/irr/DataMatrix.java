@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.io.LineNumberReader;
 import java.io.Writer;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.TreeSet;
 
@@ -46,42 +47,37 @@ public class DataMatrix {
     public final String variableName;
     private final String[] observers;
 
-    private final ArrayList<String> units = new ArrayList<String>();
+    private final String[] units;
 
-    private final ArrayList<ArrayList<String>> matrix
-        = new ArrayList<ArrayList<String>>();
+    private final int[][] matrix;
 
-    private final TreeSet<String> values = new TreeSet<String>();
+    private final String[] values;
 
-    public String getValue(int unit, int observer) {
-        ArrayList<String> obs = matrix.get(unit);
-        if (obs == null) return null;
-        if (observer >= obs.size()) return null;
-        return obs.get(observer);
+    public int getValue(int unit, int observer) {
+        return matrix[unit][observer];
     }
 
     public List<String> getUnits() {
-        return unmodifiableList(units);
+        return unmodifiableList(asList(units));
     }
     public List<String> getObservers() {
         return unmodifiableList(asList(observers));
     }
 
     public List<String> getValues() {
-        return unmodifiableList(new ArrayList<String>(values));
+        return unmodifiableList(asList(values));
     }
     
-    private void addUnit(String name, String[] observations) {
-        units.add(name);
-        matrix.add(new ArrayList<String>(asList(observations)));
-        values.addAll(asList(observations));
-        values.remove("");
-    }
-
     private DataMatrix(String variableName,
-                       String[] observers) {
+                       String[] observers,
+                       String[] units,
+                       String[] values,
+                       int[][] matrix) {
         this.variableName = variableName;
         this.observers = observers;
+        this.units = units;
+        this.values = values;
+        this.matrix = matrix;
     }
                        
     public static DataMatrix parse(LineNumberReader r) throws IOException {
@@ -92,8 +88,16 @@ public class DataMatrix {
         if (hdr.length == 0) throw new RuntimeException("hdr.length == 0" +
                                                         " on line " +
                                                         r.getLineNumber());
-        DataMatrix dm = new DataMatrix(hdr[0],
-                                       copyOfRange(hdr, 1, hdr.length));
+        final String variableName = hdr[0];
+        final String[] observers = copyOfRange(hdr, 1, hdr.length);
+
+        final ArrayList<String> units = new ArrayList<String>();
+        final ArrayList<String> values = new ArrayList<String>();
+        final ArrayList<ArrayList<Integer>> rows =
+            new ArrayList<ArrayList<Integer>>();
+        final HashMap<String,Integer> valueIndex =
+            new HashMap<String,Integer>();
+
         line = r.readLine();
         while (line != null && line.length() > 0 && line.charAt(0) != ',') {
             String[] li = line.split(",");
@@ -101,11 +105,37 @@ public class DataMatrix {
                                                            " on line " +
                                                            r.getLineNumber());
             if (li.length > 1) {
-                dm.addUnit(li[0], copyOfRange(li, 1, li.length));
+                int u = units.size();
+                units.add(li[0]);
+                ArrayList<Integer> row = new ArrayList<Integer>();
+                rows.add(row);
+                for (int i = 1; i < observers.length + 1; i++) {
+                    if (i >= li.length || li[i].isEmpty()) {
+                        row.add(-1);
+                        continue;
+                    }
+                    Integer val = valueIndex.get(li[i]);
+                    if (val == null) {
+                        val = values.size();
+                        values.add(li[i]);
+                        valueIndex.put(li[i], val);
+                    }
+                    row.add(i-1, val);
+                }
             }
             line = r.readLine();
         }
-        return dm;
+        int[][] matrix = new int[units.size()][observers.length];
+        for (int u = 0; u < units.size(); u++) {
+            for (int o = 0; o < observers.length; o++) {
+                matrix[u][o] = rows.get(u).get(o);
+            }
+        }
+        return new DataMatrix(variableName,
+                              observers,
+                              units.toArray(new String[units.size()]),
+                              values.toArray(new String[values.size()]),
+                              matrix);
     }
 
     private static void printField(Writer w, String s, int n)
@@ -118,36 +148,36 @@ public class DataMatrix {
     }
 
     public void print(Writer w) throws IOException {
-        ArrayList<Integer> cols = new ArrayList<Integer>();
+        int cols[] = new int[observers.length+1];
         {
             int fstcol = variableName.length();
             for (String u : units) {
                 if (u.length() > fstcol) fstcol = u.length();
             }
-            cols.add(fstcol);
+            cols[0] = fstcol;
         }
-        for (int i = 0; i < observers.length; i++) {
-            int col = observers[i].length();
-            for (ArrayList<String> al : matrix) {
-                if (al.size() <= i) continue;
-                int len = al.get(i).length();
+        for (int o = 0; o < observers.length; o++) {
+            int col = observers[o].length();
+            for (int u = 0; u < units.length; u++) {
+                int v = matrix[u][o];
+                int len = v >= 0 ? values[v].length() : 0;
                 if (len > col) col = len;
             }
-            cols.add(col);
+            cols[o+1] = col;
         }
-        printField(w, variableName, cols.get(0));
-        for (int i = 0; i < observers.length; i++) {
-            String s = observers[i];
+        printField(w, variableName, cols[0]);
+        for (int o = 0; o < observers.length; o++) {
+            String s = observers[o];
             w.write(" ");
-            printField(w, s, cols.get(i+1));
+            printField(w, s, cols[o+1]);
         }
         w.write("\n");
-        for (int i = 0; i < units.size(); i++) {
-            printField(w, units.get(i), cols.get(0));
-            ArrayList<String> al = matrix.get(i);
-            for (int j = 0; j < al.size(); j++) {
+        for (int u = 0; u < units.length; u++) {
+            printField(w, units[u], cols[0]);
+            for (int o = 0; o < observers.length; o++) {
                 w.write(" ");
-                printField(w, al.get(j), cols.get(j+1));
+                int v = matrix[u][o];
+                printField(w, (v >= 0 ? values[v] : ""), cols[o+1]);
             }
             w.write("\n");
         }

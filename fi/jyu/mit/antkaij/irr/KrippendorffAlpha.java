@@ -118,9 +118,8 @@ public class KrippendorffAlpha implements ReliabilityStatistic {
         valuesByUnits = new int[N][cN];
         for (int u = 0; u < N; u++) {
             for (int o = 0; o < m; o++) {
-                String vals = dm.getValue(u, o);
-                if (vals == null || vals.isEmpty()) continue;
-                int val = valInx.get(vals);
+                int val = dm.getValue(u, o);
+                if (val < 0) continue;
                 valuesByUnits[u][val]++;
             }
         }
