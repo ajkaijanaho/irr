@@ -34,12 +34,19 @@ import java.io.IOException;
 import java.io.Writer;
 import java.util.List;
 
+import static java.lang.Math.min;
+import static java.lang.Math.max;
+import static java.lang.Math.sqrt;
 import static java.util.Arrays.asList;
 
 /* References:
 
-   Jacob Cohen (1960): A Coefficient of Agreement for Nominal Scales.
+   Jacob Cohen (1960). A Coefficient of Agreement for Nominal Scales.
    Educational and Psychological Measurement 20 (1), 37-46.
+
+   Joseph L. Fleiss \& Jacob Cohen \& B. S. Everitt (1969).  Large
+   Sample Standard Errors of Kappa and Weighted Kappa.  Psychological
+   Bulletin 72 (5), 323-327.
 
  */
 
@@ -49,6 +56,7 @@ public class CohenKappa implements ReliabilityStatistic {
     public final String judgeB;
 
     private final double value;
+    private final double variance;
 
     public CohenKappa(DataMatrix dm, int A, int B) {
         variableName = dm.variableName;
@@ -69,6 +77,7 @@ public class CohenKappa implements ReliabilityStatistic {
         }
         if (n == 0) {
             value = Double.NaN;
+            variance = Double.NaN;
             return;
         }
         int[] fiA = new int[N];
@@ -87,6 +96,42 @@ public class CohenKappa implements ReliabilityStatistic {
         }
 
         value = (double)(fo - fc) / (n - fc);
+
+        // Compute Eq. 13 in Fleiss et al 1969.
+
+        final double po = (double)fo / n;
+        final double pc = (double)fc / n;
+
+        // compute the first term inside the braces
+        double term1 = 0; 
+        for (int i = 0; i < N; i++) {
+            double toSq =
+                (1 - pc) -
+                ((double)fiA[i] / n + (double)fiB[i] / n) * (1 - po);
+            term1 += (double)matrix[i][i] / n * toSq * toSq;
+        }
+
+        // compute the second term inside the braces
+        double term2 = 0;
+        for (int i = 0; i < N; i++) {
+            for (int j = 0; j < N; j++) {
+                if (i == j) continue;
+                double toSq = (double)fiA[i] / n + (double)fiB[j] / n;
+
+                term2 += (double)matrix[i][j] / n * toSq * toSq;
+            }
+        }
+        term2 *= (1 - po) * (1 - po);
+
+        // compute the sq root of the third term inside the braces
+        double term3toSq = po * pc - 2 * pc + po;
+
+        // compute the expression in braces
+        double inBraces = term1 + term2 - (term3toSq * term3toSq);
+        
+        double toFourth = 1 - pc;
+        variance = inBraces / (n * toFourth * toFourth * toFourth * toFourth);
+
     }
 
     public String name() { return "Cohen's Kappa"; }
@@ -100,12 +145,22 @@ public class CohenKappa implements ReliabilityStatistic {
     public double pointEstimate() {
         return value;
     }
-    public ConfidenceInterval confidenceInterval(double p) {
-        return null;
+
+    public ConfidenceInterval[] confidenceIntervals() {
+        double se = sqrt(variance);
+        ConfidenceInterval[] rv = new ConfidenceInterval[2];
+        rv[0] = new ConfidenceInterval(0.05,
+                                       max(-1, value - 1.96 * se),
+                                       min(+1, value + 1.96 * se));
+        rv[1] = new ConfidenceInterval(0.01,
+                                       max(-1, value - 2.58 * se),
+                                       min(+1, value + 2.58 * se));
+        return rv;
     }
     public double pValue(double minValue) {
         return Double.NaN;
     }
     public void printAdditionalInfo(Writer w) throws IOException {
+        w.write(String.format("variance = %.5f\n", variance));
     }
 }

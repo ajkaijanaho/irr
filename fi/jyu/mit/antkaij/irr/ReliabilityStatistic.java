@@ -46,9 +46,9 @@ interface ReliabilityStatistic {
     List<Double> thresholdValues();
     /** The point estimate value of the statistic. */
     double pointEstimate();
-    /** Construct a confidence interval for the specified level of
-     * significance. */
-    ConfidenceInterval confidenceInterval(double p);
+    /** Construct confidence intervals for all relevant significance
+     * levels. */
+    ConfidenceInterval[] confidenceIntervals();
     /** Compute a significance-test probability for failure to reach
      * the minValue. */
     double pValue(double minValue);

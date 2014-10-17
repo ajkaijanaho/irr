@@ -35,6 +35,7 @@ import java.io.LineNumberReader;
 import java.io.OutputStreamWriter;
 
 import static java.util.Arrays.asList;
+import static java.lang.Math.round;
 
 public class IRR {
     private static void print(ReliabilityStatistic stat) throws IOException {
@@ -44,15 +45,9 @@ public class IRR {
                           stat.letter(),
                           stat.pointEstimate());
         System.out.print("Confidence intervals:\n");
-        for (int pperc : asList(95, 99)) {
-            ConfidenceInterval ci =
-                stat.confidenceInterval((100-pperc) / 100.0);
-            if (ci == null) {
-                System.out.printf("%d %% CI not available\n", pperc);
-                continue;
-            }
+        for (ConfidenceInterval ci : stat.confidenceIntervals()) {
             System.out.printf("%d %% CI % .3f to % .3f\n",
-                              pperc, ci.min, ci.max);
+                              round((1-ci.p)*100), ci.min, ci.max);
         }
         System.out.print("\n");
         System.out.print("Significance tests:\n");
