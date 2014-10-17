@@ -47,6 +47,10 @@ public class IRR {
         for (int pperc : asList(95, 99)) {
             ConfidenceInterval ci =
                 stat.confidenceInterval((100-pperc) / 100.0);
+            if (ci == null) {
+                System.out.printf("%d %% CI not available\n", pperc);
+                continue;
+            }
             System.out.printf("%d %% CI % .3f to % .3f\n",
                               pperc, ci.min, ci.max);
         }
@@ -71,6 +75,12 @@ public class IRR {
                     DataMatrix dm = DataMatrix.parse(r);
                     if (dm == null) break;
                     print(new KrippendorffAlpha(dm));
+                    final int m = dm.getObservers().size();
+                    for (int i = 0; i < m; i++) {
+                        for (int j = i+1; j < m; j++) {
+                            print(new CohenKappa(dm, i, j));
+                        }
+                    }
                 }
             }
     }
