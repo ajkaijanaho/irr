@@ -39,6 +39,9 @@ import static java.lang.Math.max;
 import static java.lang.Math.sqrt;
 import static java.util.Arrays.asList;
 
+import static fi.jyu.mit.antkaij.irr.Util.cdf;
+import static fi.jyu.mit.antkaij.irr.Util.cdfinv;
+
 /* References:
 
    Jacob Cohen (1960). A Coefficient of Agreement for Nominal Scales.
@@ -57,6 +60,8 @@ public class CohenKappa implements ReliabilityStatistic {
 
     private final double value;
     private final double variance;
+    private double se;
+
 
     public CohenKappa(DataMatrix dm, int A, int B) {
         variableName = dm.variableName;
@@ -78,6 +83,7 @@ public class CohenKappa implements ReliabilityStatistic {
         if (n == 0) {
             value = Double.NaN;
             variance = Double.NaN;
+            se = Double.NaN;
             return;
         }
         int[] fiA = new int[N];
@@ -131,7 +137,7 @@ public class CohenKappa implements ReliabilityStatistic {
         
         double toFourth = 1 - pc;
         variance = inBraces / (n * toFourth * toFourth * toFourth * toFourth);
-
+        se = sqrt(variance);
     }
 
     public String name() { return "Cohen's Kappa"; }
@@ -146,19 +152,15 @@ public class CohenKappa implements ReliabilityStatistic {
         return value;
     }
 
-    public ConfidenceInterval[] confidenceIntervals() {
-        double se = sqrt(variance);
-        ConfidenceInterval[] rv = new ConfidenceInterval[2];
-        rv[0] = new ConfidenceInterval(0.05,
-                                       max(-1, value - 1.96 * se),
-                                       min(+1, value + 1.96 * se));
-        rv[1] = new ConfidenceInterval(0.01,
-                                       max(-1, value - 2.58 * se),
-                                       min(+1, value + 2.58 * se));
-        return rv;
+    public ConfidenceInterval confidenceInterval(double p) {
+        double z = cdfinv(1-2*(1-p));
+        return new ConfidenceInterval(p,
+                                      max(-1, value - z * se),
+                                      min(+1, value + z * se));
     }
     public double pValue(double minValue) {
-        return Double.NaN;
+        double z = (value - minValue) / se;
+        return 1-cdf(z);
     }
     public void printAdditionalInfo(Writer w) throws IOException {
         w.write(String.format("variance = %.5f\n", variance));

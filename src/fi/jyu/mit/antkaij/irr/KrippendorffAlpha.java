@@ -328,16 +328,10 @@ public class KrippendorffAlpha implements ReliabilityStatistic {
         }
         return (double)sum / nalpha_divisor;
     }
-    public ConfidenceInterval[] confidenceIntervals() {
-        ConfidenceInterval[] rv = new ConfidenceInterval[2];
-        rv[0] = confidenceInterval(0.05);
-        rv[1] = confidenceInterval(0.01);
-        return rv;
-    }
     public ConfidenceInterval confidenceInterval(final double p) {
         long sum = 0;
-        final long plow = round(p/2*nalpha_divisor);
-        final long phigh = round((1-p/2)*nalpha_divisor);
+        final long plow = round((1-p)/2*nalpha_divisor);
+        final long phigh = round((1-(1-p)/2)*nalpha_divisor);
         int i;
         for (i = 0; i < nalpha.length; i++) {
             sum += nalpha[i];

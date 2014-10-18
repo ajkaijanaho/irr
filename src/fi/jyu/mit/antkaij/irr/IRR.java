@@ -45,9 +45,11 @@ public class IRR {
                           stat.letter(),
                           stat.pointEstimate());
         System.out.print("Confidence intervals:\n");
-        for (ConfidenceInterval ci : stat.confidenceIntervals()) {
+        for (int pper : asList(95, 99)) {
+            ConfidenceInterval ci
+                = stat.confidenceInterval((double)pper/100);
             System.out.printf("%d %% CI % .3f to % .3f\n",
-                              round((1-ci.p)*100), ci.min, ci.max);
+                              pper, ci.min, ci.max);
         }
         System.out.print("\n");
         System.out.print("Significance tests:\n");
