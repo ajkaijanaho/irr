@@ -1,0 +1,11 @@
+<project>
+  <target name="build">
+    <mkdir dir="class" />
+    <javac srcdir="src" destdir="class" debug="yes" includeantruntime="false">
+      <compilerarg value="-Xlint:unchecked"/>
+    </javac>
+  </target>
+  <target name="clean">
+    <delete dir="class" />
+  </target>
+</project>
