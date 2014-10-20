@@ -30,28 +30,19 @@
 
 package fi.jyu.mit.antkaij.irr;
 
-import java.io.IOException;
-import java.io.Writer;
-import java.util.List;
 
-interface ReliabilityStatistic {
-    /** Name of the statistic. */
-    String name();
-    /** Letter used of the statistic in mathematical formulas. */
-    String letter();
-    /** Variable whose data has been analyzed. */
-    String variable();
-    /** List of statistic values for which significance tests should
-     * be conducted. */
-    List<Double> thresholdValues();
-    /** The point estimate value of the statistic. */
-    double pointEstimate();
-    /** Construct a confidence interval for the specified significance
-     * level. */
-    ConfidenceInterval confidenceInterval(double p);
-    /** Compute a significance-test probability for failure to reach
-     * the minValue. */
-    PValue pValue(double minValue);
-    /** Print any additional info regarding the analysis. */
-    void printAdditionalInfo(Writer w) throws IOException;
+public class PValue {
+    public final double p;
+    public final String sName;
+    public final double sValue;
+    public final String note;
+
+    public PValue(double p, String note) { this(p, null, Double.NaN, note); }
+
+    public PValue(double p, String sName, double sValue, String note) {
+        this.p = p;
+        this.sName = sName;
+        this.sValue = sValue;
+        this.note = note;
+    }
 }

@@ -42,6 +42,8 @@ public class Util {
            http://www.jstatsoft.org/v11/i05
         */
 
+        if (Double.isNaN(x)) return Double.NaN;
+
         if (x < -8) return 0;
         if (x >  8) return 1;
 

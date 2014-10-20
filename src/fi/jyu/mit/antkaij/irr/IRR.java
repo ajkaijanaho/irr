@@ -48,15 +48,31 @@ public class IRR {
         for (int pper : asList(95, 99)) {
             ConfidenceInterval ci
                 = stat.confidenceInterval((double)pper/100);
-            System.out.printf("%d %% CI % .3f to % .3f\n",
+            System.out.printf("%d %% CI % .3f to % .3f",
                               pper, ci.min, ci.max);
+            if (ci.note != null) {
+                System.out.printf(" (%s)", ci.note);
+            }
+            System.out.print("\n");
         }
         System.out.print("\n");
         System.out.print("Significance tests:\n");
         for (double val : stat.thresholdValues()) {
-            System.out.printf("%s < %.3f p = %.3f\n",
+            PValue p = stat.pValue(val);
+            System.out.printf("%s ≤ %5.3f p = %5.3f",
                               stat.letter(),
-                              val, stat.pValue(val));
+                              val, p.p);
+            if (p.sName != null) {
+                if (p.note != null) {
+                    System.out.printf(" (%s = % 7.3f, %s)",
+                                      p.sName, p.sValue, p.note);
+                } else {
+                    System.out.printf(" (%s = % 7.3f)", p.sName, p.sValue);
+                }
+            } else if (p.note != null) {
+                    System.out.printf(" (%s)", p.note);
+            }
+            System.out.print("\n");
         }
         System.out.print("\n");
         OutputStreamWriter w = new OutputStreamWriter(System.out);
@@ -72,6 +88,7 @@ public class IRR {
                     DataMatrix dm = DataMatrix.parse(r);
                     if (dm == null) break;
                     print(new KrippendorffAlpha(dm));
+                    print(new FleissKappa(dm));
                     final int m = dm.getObservers().size();
                     for (int i = 0; i < m; i++) {
                         for (int j = i+1; j < m; j++) {

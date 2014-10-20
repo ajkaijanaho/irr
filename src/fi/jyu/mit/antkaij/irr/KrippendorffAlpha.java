@@ -320,13 +320,13 @@ public class KrippendorffAlpha implements ReliabilityStatistic {
         nalpha_divisor = X - nx;
     }
 
-    public double pValue(double minimumAlpha) {
+    public PValue pValue(double minimumAlpha) {
         long sum = 0;
         int mina = toFP(minimumAlpha);
-        for (int i = 0; i < mina; i++) {
+        for (int i = 0; i <= mina; i++) {
             sum += nalpha[i];
         }
-        return (double)sum / nalpha_divisor;
+        return new PValue((double)sum / nalpha_divisor, "bootstrapped");
     }
     public ConfidenceInterval confidenceInterval(final double p) {
         long sum = 0;

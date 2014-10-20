@@ -34,10 +34,16 @@ public class ConfidenceInterval {
     public final double p;
     public final double min;
     public final double max;
+    public final String note;
     
     public ConfidenceInterval(double p, double min, double max) {
+        this(p,min,max,null);
+    }
+
+    public ConfidenceInterval(double p, double min, double max, String note) {
         this.p = p;
         this.min = min;
         this.max = max;
+        this.note = note;
     }
 }

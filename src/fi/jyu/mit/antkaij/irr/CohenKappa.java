@@ -61,7 +61,7 @@ public class CohenKappa implements ReliabilityStatistic {
     private final double value;
     private final double variance;
     private double se;
-
+    private final int n;
 
     public CohenKappa(DataMatrix dm, int A, int B) {
         variableName = dm.variableName;
@@ -80,6 +80,7 @@ public class CohenKappa implements ReliabilityStatistic {
             ++matrix[a][b];
             ++n;
         }
+        this.n = n;
         if (n == 0) {
             value = Double.NaN;
             variance = Double.NaN;
@@ -153,16 +154,23 @@ public class CohenKappa implements ReliabilityStatistic {
     }
 
     public ConfidenceInterval confidenceInterval(double p) {
-        double z = cdfinv(1-2*(1-p));
+        if (n <= 30) return new ConfidenceInterval(p,
+                                                   Double.NaN,
+                                                   Double.NaN,
+                                                   "too small a sample");
+        double z = cdfinv(1-(1-p)/2);
         return new ConfidenceInterval(p,
                                       max(-1, value - z * se),
                                       min(+1, value + z * se));
     }
-    public double pValue(double minValue) {
+    public PValue pValue(double minValue) {
+        if (n <= 30) return new PValue(Double.NaN,
+                                       "too small a sample");
         double z = (value - minValue) / se;
-        return 1-cdf(z);
+        return new PValue(1 - cdf(z), "z", z, "upper tail");
     }
     public void printAdditionalInfo(Writer w) throws IOException {
         w.write(String.format("variance = %.5f\n", variance));
+        w.write(String.format("n = %d\n", n));
     }
 }
