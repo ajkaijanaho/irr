@@ -154,23 +154,25 @@ public class CohenKappa implements ReliabilityStatistic {
     }
 
     public ConfidenceInterval confidenceInterval(double p) {
-        if (n <= 30) return new ConfidenceInterval(p,
-                                                   Double.NaN,
-                                                   Double.NaN,
-                                                   "too small a sample");
         double z = cdfinv(1-(1-p)/2);
         return new ConfidenceInterval(p,
                                       max(-1, value - z * se),
                                       min(+1, value + z * se));
     }
     public PValue pValue(double minValue) {
-        if (n <= 30) return new PValue(Double.NaN,
-                                       "too small a sample");
         double z = (value - minValue) / se;
         return new PValue(1 - cdf(z), "z", z, "upper tail");
     }
     public void printAdditionalInfo(Writer w) throws IOException {
         w.write(String.format("variance = %.5f\n", variance));
         w.write(String.format("n = %d\n", n));
+        if (n < 30) {
+            w.write("\nWARNING: The sample is small.\n");
+            w.write("The assumptions underlying the variance are probably " +
+                    "invalid.\n");
+            w.write("This means the CONFIDENCE INTERVALS and SIGNIFICANCE " +
+                    "TESTS are\n");
+            w.write("probably INVALID as well.\n");
+        }
     }
 }
