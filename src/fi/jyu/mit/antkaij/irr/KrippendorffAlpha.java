@@ -60,6 +60,7 @@ import static java.lang.Math.pow;
 import static java.lang.Math.round;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
+import static java.util.Arrays.sort;
 
 public class KrippendorffAlpha implements ReliabilityStatistic {
     public final String variableName;
@@ -274,21 +275,8 @@ public class KrippendorffAlpha implements ReliabilityStatistic {
         return q;
     }
 
-    private static final int precision = 10000;
-    private static final int base = -precision;
-    private static int toFP(double x) {
-        int rv = (int)round(x*precision)-base;
-        if (rv < 0) return 0;
-        if (rv >= precision-base) return precision-base;
-        return rv;
-    }
-
-    private static double fromFP(int fp) {
-        return (double)(fp+base)/precision;
-    }
-
-    private int[] nalpha;
-    private int nalpha_divisor;
+    private double[] samples;
+    private int p_divisor;
 
     /* Krippendorff 2013 Second Step
 
@@ -326,7 +314,7 @@ public class KrippendorffAlpha implements ReliabilityStatistic {
         final double MDe = M*denominator;
 
         // Third Step
-        nalpha = new int[precision-base+1];
+        samples = new double[X];
         final Random rand = new Random();
         for (int i = 0; i < X; i++) {
             double alpha = 1;
@@ -334,13 +322,14 @@ public class KrippendorffAlpha implements ReliabilityStatistic {
                 double r = rand.nextDouble();
                 alpha -= f(r, MDe);
             }
-            ++nalpha[toFP(alpha)];
+            samples[i] = alpha;
             if (i % (X/20) == 0) {
                 System.err.printf("Bootstrap progress %d %%\r", i*100/X);
             }
         }
         System.err.print("                        \r");
 
+        sort(samples);
 
         // Fourth Step
         int nx = 0;
@@ -356,8 +345,11 @@ public class KrippendorffAlpha implements ReliabilityStatistic {
             case 0:
                 break;
             case 1:
-                nx = nalpha[toFP(1)];
-                nalpha[toFP(1)] = 0;
+                nx = samples.length;
+                while (nx > 0 && samples[nx-1] >= 1) {
+                    samples[--nx] = Double.NaN;
+                }
+                nx = samples.length - nx;
                 break;
             case 2:
                 double sum = 0;
@@ -366,7 +358,11 @@ public class KrippendorffAlpha implements ReliabilityStatistic {
                                M);
                 }
                 nx = (int)round(X*sum);
-                nalpha[toFP(1)] -= nx;
+                for (int i = 0; i < nx; i++) {
+                    int inx = samples.length - i - 1;
+                    if (samples[inx] < 1) break;
+                    samples[inx] = Double.NaN;
+                }
                 break;
             default:
                 System.err.println("Internal Error in Fourth Step");
@@ -375,60 +371,59 @@ public class KrippendorffAlpha implements ReliabilityStatistic {
         }
         
         // Fifth Step
-        nalpha_divisor = X - nx;
+        p_divisor = X - nx;
     }
 
     public PValue pValue(double minimumAlpha) {
-        long sum = 0;
-        int mina = toFP(minimumAlpha);
-        for (int i = 0; i <= mina; i++) {
-            sum += nalpha[i];
+        long count = 0;
+        for (int i = 0; i < samples.length; i++) {
+            if (samples[i] >= minimumAlpha) break;
+            ++count;
         }
-        return new PValue((double)sum / nalpha_divisor, "bootstrapped");
+        return new PValue((double)count / p_divisor, "bootstrapped");
     }
     public ConfidenceInterval confidenceInterval(final double p) {
-        long sum = 0;
-        final long plow = round((1-p)/2*nalpha_divisor);
-        final long phigh = round((1-(1-p)/2)*nalpha_divisor);
+        final long plow = round((1-p)/2*p_divisor);
+        final long phigh = round((1-(1-p)/2)*p_divisor);
         int i;
-        for (i = 0; i < nalpha.length; i++) {
-            sum += nalpha[i];
-            if (sum >= plow) break;
+        for (i = 0; i < samples.length; i++) {
+            if (i >= plow) break;
         }
-        double min = fromFP(i);
-        for (/* i */; i < nalpha.length; i++) {
-            if (sum > phigh) break;
-            sum += nalpha[i];
+        double min = samples[i];
+        for (/* i */; i < samples.length; i++) {
+            if (i > phigh) break;
         }
-        double max = fromFP(i);
+        double max = samples[i > 0 ? i-1 : 0];
         return new ConfidenceInterval(p, min, max);
     }
 
     public void printDistribution(Writer w) throws IOException {
         w.write(format("Bootstrapped sampling distribution (X = %d, M = %d):\n",
                        X, M));
-        for (int i = -10; i < 10; i++) {
-            double low = i / 10.0;
-            double high = low + 0.1;
-            int lowi = toFP(low);
-            int highi = toFP(high);
-            if (i == 10) highi++;
-            long sum = 0;
-            for (int j = lowi; j < highi; j++) {
-                sum += nalpha[j];
-            }
-            double p = (double)sum / nalpha_divisor;
-            w.write(format("𝛼 ∈ [% 3.1f, % 3.1f%c ", low, high,
-                           i == 9 ? ']' : ')'));
-            if (p >= 0.01) {
-                double op = p;
-                while (p > 0) {
-                    w.write("*");
-                    p -= 1.0/60;
+        int highX10 = -9;
+        int count = 0;
+        for (int i = 0; /**/; i++) {
+            if (i >= samples.length || samples[i] > highX10 / 10.0) {
+                double p = (double)count / p_divisor;
+                w.write(format("𝛼 ∈ %c% 3.1f, % 3.1f] ",
+                               highX10 == -9 ? '[' : ']',
+                               (highX10-1)/10.0,
+                               highX10/10.0));
+                if (p >= 0.01) {
+                    double op = p;
+                    while (p > 0) {
+                        w.write("*");
+                        p -= 1.0/60;
+                    }
+                    w.write(format(" %4.2f", op));
                 }
-                w.write(format(" %4.2f", op));
+                w.write("\n");
+
+                count = 0;
+                ++highX10;
+                if (i >= samples.length) break;
             }
-            w.write("\n");
+            if (!Double.isNaN(samples[i])) ++count;
         }
     }
 
