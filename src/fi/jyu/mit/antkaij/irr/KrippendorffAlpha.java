@@ -68,8 +68,6 @@ public class KrippendorffAlpha implements ReliabilityStatistic {
 
     private final double denominator;
 
-    private final List<String> units;
-    private final List<String> observers;
     private final List<String> values;
 
     private final int N;
@@ -123,12 +121,10 @@ public class KrippendorffAlpha implements ReliabilityStatistic {
 
         variableName = dm.variableName;
 
-        units = dm.getUnits();
-        observers = dm.getObservers();
         values = dm.getValues();
 
-        N  = units.size();
-        m  = observers.size();
+        N  = dm.getUnits().size();
+        m  = dm.getObservers().size();
         cN = values.size();
 
         for (int i = 0; i < cN; i++) valInx.put(values.get(i), i);
