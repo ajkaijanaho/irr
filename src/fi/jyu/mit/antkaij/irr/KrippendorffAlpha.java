@@ -68,6 +68,8 @@ public class KrippendorffAlpha implements ReliabilityStatistic {
 
     private final double denominator;
 
+    private final int scaleType;
+
     private final List<String> values;
 
     private final int N;
@@ -89,6 +91,9 @@ public class KrippendorffAlpha implements ReliabilityStatistic {
     // coincidence table
     private final double[][] coincidences;
 
+    // expected table
+    private final double[][] expecteds;
+
     // Krippendorff's n_c
     private final int[] valSums;
 
@@ -107,16 +112,19 @@ public class KrippendorffAlpha implements ReliabilityStatistic {
 
     }
 
+    private final double[][] deltaSq;
 
     public KrippendorffAlpha(DataMatrix dm) {
         this(dm, 20000);
     }
 
     public KrippendorffAlpha(DataMatrix dm, int resamples) {
-        if (dm.scaleType != dm.NOMINAL_SCALE) {
-            throw new UnsupportedDataException("Only nominal scale currently " +
-                                               "implemented for " +
-                                               "Krippendorff's Alpha");
+        scaleType = dm.scaleType;
+        if (scaleType != dm.NOMINAL_SCALE &&
+            scaleType != dm.ORDINAL_SCALE) {
+            throw new UnsupportedDataException("Only nominal and ordinal " +
+                                               "scale currently implemented " +
+                                               "for Krippendorff's Alpha");
         }
 
         variableName = dm.variableName;
@@ -187,30 +195,65 @@ public class KrippendorffAlpha implements ReliabilityStatistic {
             totalSums = sum;
         }
 
+        expecteds = new double[cN][cN];
+        for (int c = 0; c < cN; c++) {
+            for (int k = 0; k < cN; k++) {
+                if (c == k) {
+                    expecteds[c][k] = (double)valSums[c] * (valSums[k]-1)
+                        / (totalSums - 1);
+                } else {
+                    expecteds[c][k] = (double)valSums[c] * valSums[k]
+                        / (totalSums - 1);
+                }
+            }
+        }
+
+        deltaSq = new double[cN][cN];
+        switch (scaleType) {
+        case DataMatrix.NOMINAL_SCALE:
+            for (int c = 0; c < cN; c++) {
+                for (int k = 0; k < cN; k++) {
+                    deltaSq[c][k] = c != k ? 1 : 0;
+                }
+            }
+            break;
+        case DataMatrix.ORDINAL_SCALE:
+            for (int c = 0; c < cN; c++) {
+                for (int k = 0; k < cN; k++) {
+                    double sum = 0;
+                    if (c < k) {
+                        for (int g = c; g <= k; g++) sum += valSums[g];
+                    } else {
+                        for (int g = k; g <= c; g++) sum += valSums[g];
+                    }
+                    sum -= (valSums[c] + valSums[k]) / 2.0;
+                    deltaSq[c][k] = sum*sum;
+                }
+            }
+            break;
+        default:
+            throw new Error("unsupported scale");
+        }
+
         /* Compute the actual alpha, using the formula at Step D.4 in
            http://web.asc.upenn.edu/usr/krippendorff/mwebreliability5.pdf */
         
         double nominator = 0;
         for (int c = 0; c < cN; c++) {
             for (int k = 0; k < cN; k++) {
-                // using nominal data metric
-                if (k == c) continue;
-                nominator += coincidences[c][k];
+                nominator += coincidences[c][k] * deltaSq[c][k];
             }
         }
         nominator /= totalSums;
 
-        long summ = 0;
+        double denominator = 0;
         for (int c = 0; c < cN; c++) {
-            long sum = 0;
             for (int k = 0; k < cN; k++) {
-                // using nominal data metric
-                if (c == k) continue;
-                sum += valSums[k];
+                denominator += expecteds[c][k] * deltaSq[c][k];
             }
-            summ += valSums[c] * sum;
         }
-        denominator = (double)summ / (totalSums*(totalSums - 1));
+        denominator /= totalSums;
+        this.denominator = denominator;
 
         value = 1 - nominator / denominator;
 
@@ -260,7 +303,7 @@ public class KrippendorffAlpha implements ReliabilityStatistic {
 
        2. f(r) := delta_ck / M De for these c and k.
     */
-    private double f(double r, double invMDe) {
+    private double f(double r, double MDe) {
         double sum = 0;
         int c = 0, k = 0;
         OUTER: for (c = 0; c < cN; c++) {
@@ -270,8 +313,7 @@ public class KrippendorffAlpha implements ReliabilityStatistic {
             }
         }
 
-        // using nominal data metric
-        return  c == k ? 0 : invMDe;
+        return deltaSq[c][k] / MDe;
     }
 
 
@@ -281,7 +323,7 @@ public class KrippendorffAlpha implements ReliabilityStatistic {
         // Compute M; computed in the constructor
 
         // Second Step (partial; see f above for the rest)
-        final double invMDe = 1.0/(M*denominator);
+        final double MDe = M*denominator;
 
         // Third Step
         nalpha = new int[precision-base+1];
@@ -290,7 +332,7 @@ public class KrippendorffAlpha implements ReliabilityStatistic {
             double alpha = 1;
             for (int j = 0; j < M; j++) {
                 double r = rand.nextDouble();
-                alpha -= f(r, invMDe);
+                alpha -= f(r, MDe);
             }
             ++nalpha[toFP(alpha)];
             if (i % (X/20) == 0) {
@@ -405,11 +447,31 @@ public class KrippendorffAlpha implements ReliabilityStatistic {
         }
         
         w.write("Coincidences\n");
-        for (String s : values) w.write("\t" + s);
+        for (String s : values) w.write(format("\t%6s", s));
         for (int c = 0; c < cN; c++) {
             w.write("\n" + values.get(c));
             for (int k = 0; k < cN; k++) {
                 w.write(format("\t%6.3f", coincidences[c][k]));
+            }
+        }
+        w.write("\n");
+        w.write("\n");
+        w.write("Expected coincidences:\n");
+        for (String s : values) w.write(format("\t%10s", s));
+        for (int c = 0; c < cN; c++) {
+            w.write("\n" + values.get(c));
+            for (int k = 0; k < cN; k++) {
+                w.write(format("\t%10.3f", expecteds[c][k]));
+            }
+        }
+        w.write("\n");
+        w.write("\n");
+        w.write("Delta\n");
+        for (String s : values) w.write(format("\t%10s", s));
+        for (int c = 0; c < cN; c++) {
+            w.write("\n" + values.get(c));
+            for (int k = 0; k < cN; k++) {
+                w.write(format("\t%10.3f", deltaSq[c][k]));
             }
         }
         w.write("\n");
