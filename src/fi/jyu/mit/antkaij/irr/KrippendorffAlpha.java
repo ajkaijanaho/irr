@@ -440,7 +440,27 @@ public class KrippendorffAlpha implements ReliabilityStatistic {
             printDistribution(w);
             w.write("\n");
         }
-        
+
+        w.write("Data is ");
+        switch (scaleType) {
+        case DataMatrix.NOMINAL_SCALE:
+            w.write("nominal");
+            break;
+        case DataMatrix.ORDINAL_SCALE:
+            w.write("ordinal");
+            break;
+        default:
+            throw new Error("unsupported scale");
+        }
+        w.write(".\n\n");
+
+        w.write("Data counts:\n");
+        w.write(format(" %5d units\n", N));
+        w.write(format(" %5d observers\n", m));
+        w.write(format(" %5d values\n", m));
+        w.write(format(" %5d observations\n", totalSums));
+        w.write("\n");
+
         w.write("Coincidences\n");
         for (String s : values) w.write(format("\t%6s", s));
         for (int c = 0; c < cN; c++) {
