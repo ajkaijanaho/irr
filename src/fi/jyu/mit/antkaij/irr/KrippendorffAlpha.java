@@ -96,11 +96,31 @@ public class KrippendorffAlpha implements ReliabilityStatistic {
 
     private final int totalSums; // Krippendorff's n
 
+    public static class Maker implements MakeReliabilityStatistic {
+        public String name() { return "Krippendorff's alpha-reliability"; }
+
+        private final DataMatrix dm;
+        public Maker(DataMatrix dm) {
+            this.dm = dm;
+        }
+        public ReliabilityStatistic mk() {
+            return new KrippendorffAlpha(dm);
+        }
+
+    }
+
+
     public KrippendorffAlpha(DataMatrix dm) {
         this(dm, 20000);
     }
 
     public KrippendorffAlpha(DataMatrix dm, int resamples) {
+        if (dm.scaleType != dm.NOMINAL_SCALE) {
+            throw new UnsupportedDataException("Only nominal scale currently " +
+                                               "implemented for " +
+                                               "Krippendorff's Alpha");
+        }
+
         variableName = dm.variableName;
 
         units = dm.getUnits();
@@ -374,7 +394,6 @@ public class KrippendorffAlpha implements ReliabilityStatistic {
         }
     }
 
-    public String name() { return "Krippendorff's alpha-reliability"; }
     public String letter() { return "𝛼"; }
     public String variable() { return variableName; }
     public double pointEstimate() { return value; }
@@ -400,4 +419,5 @@ public class KrippendorffAlpha implements ReliabilityStatistic {
         w.write("\n");
         w.write("\n");
     }
+
 }

@@ -44,6 +44,10 @@ import static java.util.Collections.unmodifiableList;
 
 /** The data matrix for a single variable. */
 public class DataMatrix {
+    public static final int NOMINAL_SCALE = 0;
+    public static final int ORDINAL_SCALE = 1;
+
+    public final int scaleType;
     public final String variableName;
     private final String[] observers;
 
@@ -68,11 +72,13 @@ public class DataMatrix {
         return unmodifiableList(asList(values));
     }
     
-    private DataMatrix(String variableName,
+    private DataMatrix(int scaleType,
+                       String variableName,
                        String[] observers,
                        String[] units,
                        String[] values,
                        int[][] matrix) {
+        this.scaleType = scaleType;
         this.variableName = variableName;
         this.observers = observers;
         this.units = units;
@@ -85,6 +91,30 @@ public class DataMatrix {
         while (line != null && line.matches(",*")) line = r.readLine();
         if (line == null) return null;
         String[] hdr = line.split(",");
+        final ArrayList<String> values = new ArrayList<String>();
+        final HashMap<String,Integer> valueIndex =
+            new HashMap<String,Integer>();
+        boolean mayAddValues = true;
+        int scaleType;
+        if (hdr.length > 0 && hdr[0].equals("ORDINAL")) {
+            scaleType = ORDINAL_SCALE;
+            for (int i = 1; i < hdr.length; i++) {
+                if (valueIndex.containsKey(hdr[i])) {
+                    throw new RuntimeException("duplicate key '" +
+                                               hdr[i] +
+                                               "' in ORDINAL list");
+                }
+                values.add(hdr[i]);
+                valueIndex.put(hdr[i], i-1);
+            }
+            mayAddValues = false;
+
+            line = r.readLine();
+            if (line == null) return null;
+            hdr = line.split(",");
+        } else {
+            scaleType = NOMINAL_SCALE;
+        }
         if (hdr.length == 0) throw new RuntimeException("hdr.length == 0" +
                                                         " on line " +
                                                         r.getLineNumber());
@@ -92,11 +122,8 @@ public class DataMatrix {
         final String[] observers = copyOfRange(hdr, 1, hdr.length);
 
         final ArrayList<String> units = new ArrayList<String>();
-        final ArrayList<String> values = new ArrayList<String>();
         final ArrayList<ArrayList<Integer>> rows =
             new ArrayList<ArrayList<Integer>>();
-        final HashMap<String,Integer> valueIndex =
-            new HashMap<String,Integer>();
 
         line = r.readLine();
         while (line != null && line.length() > 0 && line.charAt(0) != ',') {
@@ -116,6 +143,11 @@ public class DataMatrix {
                     }
                     Integer val = valueIndex.get(li[i]);
                     if (val == null) {
+                        if (!mayAddValues) {
+                            throw new RuntimeException("Value '" +
+                                                       li[i] +
+                                                       "' not allowed");
+                        }
                         val = values.size();
                         values.add(li[i]);
                         valueIndex.put(li[i], val);
@@ -131,7 +163,8 @@ public class DataMatrix {
                 matrix[u][o] = rows.get(u).get(o);
             }
         }
-        return new DataMatrix(variableName,
+        return new DataMatrix(scaleType,
+                              variableName,
                               observers,
                               units.toArray(new String[units.size()]),
                               values.toArray(new String[values.size()]),

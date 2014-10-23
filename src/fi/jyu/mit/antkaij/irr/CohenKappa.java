@@ -63,7 +63,28 @@ public class CohenKappa implements ReliabilityStatistic {
     private double se;
     private final int n;
 
+    public static class Maker implements MakeReliabilityStatistic {
+        public String name() { return "Cohen's Kappa"; }
+
+        private final DataMatrix dm;
+        private final int A;
+        private final int B;
+        public Maker(DataMatrix dm, int A, int B) {
+            this.dm = dm;
+            this.A = A;
+            this.B = B;
+        }
+        public ReliabilityStatistic mk() {
+            return new CohenKappa(dm, A, B);
+        }
+    }
+
     public CohenKappa(DataMatrix dm, int A, int B) {
+        if (dm.scaleType != dm.NOMINAL_SCALE) {
+            throw new UnsupportedDataException("Only nominal scale currently " +
+                                               "implemented for Cohen's kappa");
+        }
+
         variableName = dm.variableName;
         this.judgeA = dm.getObservers().get(A);
         this.judgeB = dm.getObservers().get(B);
@@ -141,7 +162,6 @@ public class CohenKappa implements ReliabilityStatistic {
         se = sqrt(variance);
     }
 
-    public String name() { return "Cohen's Kappa"; }
     public String letter() { return "𝜅"; }
     public String variable() {
         return variableName + "(" + judgeA + "," + judgeB + ")";

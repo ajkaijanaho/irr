@@ -38,8 +38,15 @@ import static java.util.Arrays.asList;
 import static java.lang.Math.round;
 
 public class IRR {
-    private static void print(ReliabilityStatistic stat) throws IOException {
-        System.out.printf("======= %s =======\n", stat.name());
+    private static void print(MakeReliabilityStatistic mrs) throws IOException {
+        System.out.printf("======= %s =======\n", mrs.name());
+        ReliabilityStatistic stat;
+        try {
+            stat = mrs.mk();
+        } catch (UnsupportedDataException e) {
+            System.out.println(e.getMessage());
+            return;
+        }
         System.out.printf("Variable: %s\n", stat.variable());
         System.out.printf("%s = % .3f\n\n",
                           stat.letter(),
@@ -85,14 +92,14 @@ public class IRR {
         try (LineNumberReader r =
              new LineNumberReader(new java.io.InputStreamReader(System.in))) {
                 while (true) {
-                    DataMatrix dm = DataMatrix.parse(r);
+                    final DataMatrix dm = DataMatrix.parse(r);
                     if (dm == null) break;
-                    print(new KrippendorffAlpha(dm));
-                    print(new FleissKappa(dm));
+                    print(new KrippendorffAlpha.Maker(dm));
+                    print(new FleissKappa.Maker(dm));
                     final int m = dm.getObservers().size();
                     for (int i = 0; i < m; i++) {
                         for (int j = i+1; j < m; j++) {
-                            print(new CohenKappa(dm, i, j));
+                            print(new CohenKappa.Maker(dm, i, j));
                         }
                     }
                 }

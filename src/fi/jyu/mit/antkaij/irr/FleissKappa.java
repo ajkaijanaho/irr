@@ -75,7 +75,25 @@ public class FleissKappa implements ReliabilityStatistic {
     private final double se;
     private final int n;
     
+    public static class Maker implements MakeReliabilityStatistic {
+        public String name()   { return "Fleiss' Kappa"; }
+
+        private final DataMatrix dm;
+        public Maker(DataMatrix dm) {
+            this.dm = dm;
+        }
+        public ReliabilityStatistic mk() {
+            return new FleissKappa(dm);
+        }
+
+    }
+
     public FleissKappa(DataMatrix dm) {
+        if (dm.scaleType != dm.NOMINAL_SCALE) {
+            throw new UnsupportedDataException("Only nominal scale currently " +
+                                               "implemented for Cohen's kappa");
+        }
+
         variableName = dm.variableName;
 
         final int uN = dm.getUnits().size();
@@ -146,7 +164,6 @@ public class FleissKappa implements ReliabilityStatistic {
         se = sqrt(variance);
     }
 
-    public String name()   { return "Fleiss' Kappa"; }
     public String letter() { return "𝜅"; }
     public String variable() { return variableName; }
     public List<Double> thresholdValues() {
