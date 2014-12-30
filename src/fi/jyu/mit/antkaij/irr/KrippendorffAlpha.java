@@ -457,7 +457,7 @@ public class KrippendorffAlpha implements ReliabilityStatistic {
         w.write("Data counts:\n");
         w.write(format(" %5d units\n", N));
         w.write(format(" %5d observers\n", m));
-        w.write(format(" %5d values\n", m));
+        w.write(format(" %5d values\n", cN));
         w.write(format(" %5d observations\n", totalSums));
         w.write("\n");
 
@@ -465,9 +465,12 @@ public class KrippendorffAlpha implements ReliabilityStatistic {
         for (String s : values) w.write(format("\t%6s", s));
         for (int c = 0; c < cN; c++) {
             w.write("\n" + values.get(c));
+            double sum = 0;
             for (int k = 0; k < cN; k++) {
+                sum += coincidences[c][k];
                 w.write(format("\t%6.3f", coincidences[c][k]));
             }
+            w.write(format("\t%6.3f", sum));            
         }
         w.write("\n");
         w.write("\n");
