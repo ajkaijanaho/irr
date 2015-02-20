@@ -1,5 +1,5 @@
 /*  irr - inter-rater reliability calculator
-    Copyright © 2014 Antti-Juhani Kaijanaho
+    Copyright © 2014, 2015 Antti-Juhani Kaijanaho
 
     Redistribution and use in source and binary forms, with or without
     modification, are permitted provided that the following conditions
@@ -46,7 +46,8 @@ import static java.util.Collections.unmodifiableList;
 public class DataMatrix {
     public static final int NOMINAL_SCALE = 0;
     public static final int ORDINAL_SCALE = 1;
-
+    public static final int INTERVAL_SCALE = 2;
+    
     public final int scaleType;
     public final String variableName;
     private final String[] observers;
@@ -112,6 +113,12 @@ public class DataMatrix {
             line = r.readLine();
             if (line == null) return null;
             hdr = line.split(",");
+        } else if (hdr.length > 0 && hdr[0].equals("INTERVAL")) {
+            scaleType = INTERVAL_SCALE;
+
+            line = r.readLine();
+            if (line == null) return null;
+            hdr = line.split(",");
         } else {
             scaleType = NOMINAL_SCALE;
         }
@@ -148,6 +155,17 @@ public class DataMatrix {
                                                        li[i] +
                                                        "' not allowed");
                         }
+                        if (scaleType == INTERVAL_SCALE) {
+                            try {
+                                Double.valueOf(li[i]);
+                            } catch (NumberFormatException e) {
+                                throw new RuntimeException("Value '" +
+                                                           li[i] +
+                                                           "' is not numeric: "
+                                                           + e.getMessage());
+                            }
+                        }
+                        
                         val = values.size();
                         values.add(li[i]);
                         valueIndex.put(li[i], val);

@@ -1,5 +1,5 @@
 /*  irr - inter-rater reliability calculator
-    Copyright © 2014 Antti-Juhani Kaijanaho
+    Copyright © 2014, 2015 Antti-Juhani Kaijanaho
 
     Redistribution and use in source and binary forms, with or without
     modification, are permitted provided that the following conditions
@@ -122,9 +122,11 @@ public class KrippendorffAlpha implements ReliabilityStatistic {
     public KrippendorffAlpha(DataMatrix dm, int resamples) {
         scaleType = dm.scaleType;
         if (scaleType != dm.NOMINAL_SCALE &&
-            scaleType != dm.ORDINAL_SCALE) {
-            throw new UnsupportedDataException("Only nominal and ordinal " +
-                                               "scale currently implemented " +
+            scaleType != dm.ORDINAL_SCALE &&
+            scaleType != dm.INTERVAL_SCALE) {
+            throw new UnsupportedDataException("Only nominal, ordinal, " +
+                                               "and interval scale " +
+                                               "currently implemented " +
                                                "for Krippendorff's Alpha");
         }
 
@@ -229,6 +231,16 @@ public class KrippendorffAlpha implements ReliabilityStatistic {
                     }
                     sum -= (valSums[c] + valSums[k]) / 2.0;
                     deltaSq[c][k] = sum*sum;
+                }
+            }
+            break;
+        case DataMatrix.INTERVAL_SCALE:
+            for (int c = 0; c < cN; c++) {
+                for (int k = 0; k < cN; k++) {
+                    double vc = Double.valueOf(values.get(c));
+                    double vk = Double.valueOf(values.get(k));
+                    double diff = vc - vk;
+                    deltaSq[c][k] = diff*diff;
                 }
             }
             break;
@@ -448,6 +460,9 @@ public class KrippendorffAlpha implements ReliabilityStatistic {
             break;
         case DataMatrix.ORDINAL_SCALE:
             w.write("ordinal");
+            break;
+        case DataMatrix.INTERVAL_SCALE:
+            w.write("interval");
             break;
         default:
             throw new Error("unsupported scale");
